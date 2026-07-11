@@ -305,10 +305,10 @@ def get_linux_clipboard() -> tuple[str, str]:
     Read current clipboard content from Linux.
     Returns (content_type, content) where content_type is 'text' or 'image'.
     """
-    display = os.environ.get("WAYLAND_DISPLAY")
+    display_server = detect_display_server()
     
     try:
-        if display:
+        if display_server == "wayland":
             # Wayland - try text first
             result = subprocess.run(
                 ["wl-paste", "--no-newline"],
@@ -317,7 +317,7 @@ def get_linux_clipboard() -> tuple[str, str]:
             )
             if result.returncode == 0:
                 return ("text", result.stdout.decode("utf-8", errors="replace"))
-        else:
+        elif display_server == "x11":
             # X11
             result = subprocess.run(
                 ["xclip", "-selection", "clipboard", "-o"],
@@ -326,15 +326,19 @@ def get_linux_clipboard() -> tuple[str, str]:
             )
             if result.returncode == 0:
                 return ("text", result.stdout.decode("utf-8", errors="replace"))
+        else:
+            logger.error("Clipboard read failed: no graphical session environment is configured")
+            return ("error", "No graphical session environment is configured")
     except subprocess.TimeoutExpired:
         return ("error", "Clipboard read timeout")
     except FileNotFoundError:
         return ("error", "Clipboard tool not found")
     except Exception as e:
         return ("error", str(e))
-    
-    return ("empty", "")
 
+    error = result.stderr.decode("utf-8", errors="replace").strip()
+    logger.error("Clipboard read command failed (%s): %s", display_server, error or "unknown error")
+    return ("error", error or "Clipboard command failed")
 
 class ClipboardPayload(BaseModel):
     type: Literal["text", "url"]

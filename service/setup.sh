@@ -155,6 +155,22 @@ else
     echo -e " ✅ (new)"
 fi
 
+# A systemd user service does not inherit the terminal's graphical-session
+# environment.  Without these variables, xclip/wl-paste cannot reach the
+# clipboard after a reboot and reports an empty clipboard to the phone.
+# Capture the current session explicitly when installing the service.  Set
+# only one display backend: setting WAYLAND_DISPLAY in an X11 session would
+# make the server select wl-paste even when the user only has xclip.
+if [[ "${XDG_SESSION_TYPE,,}" == "wayland" || -n "${WAYLAND_DISPLAY:-}" ]]; then
+    CLIPBOARD_ENVIRONMENT="Environment=\"XDG_SESSION_TYPE=wayland\"
+Environment=\"XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}\"
+Environment=\"WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-wayland-0}\""
+else
+    CLIPBOARD_ENVIRONMENT="Environment=\"XDG_SESSION_TYPE=x11\"
+Environment=\"DISPLAY=${DISPLAY:-:0}\"
+Environment=\"XAUTHORITY=${XAUTHORITY:-$HOME/.Xauthority}\""
+fi
+
 # Create service file with token
 echo -ne "${YELLOW}[5/7]${NC} Setting up systemd service..."
 mkdir -p ~/.config/systemd/user
@@ -167,6 +183,7 @@ After=network.target
 Type=simple
 WorkingDirectory=$PROJECT_DIR/systemd
 Environment="SECURITY_TOKEN=$SECURITY_TOKEN"
+$CLIPBOARD_ENVIRONMENT
 ExecStart=$(which python3) -m uvicorn main:app --host 0.0.0.0 --port 8080
 Restart=always
 RestartSec=5

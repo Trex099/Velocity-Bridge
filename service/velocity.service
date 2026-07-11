@@ -6,10 +6,16 @@ After=network.target
 Type=simple
 # Set your security token here
 Environment="SECURITY_TOKEN=YOUR_SECURE_TOKEN_HERE"
-# Inherit display environment for clipboard access
-Environment="XDG_RUNTIME_DIR=/run/user/%U"
-Environment="WAYLAND_DISPLAY=wayland-0"
+# Set the variables for the active graphical session.  Do not enable both
+# backends: the server chooses Wayland when WAYLAND_DISPLAY is present.
+# X11:
+Environment="XDG_SESSION_TYPE=x11"
 Environment="DISPLAY=:0"
+Environment="XAUTHORITY=%h/.Xauthority"
+# Wayland (replace the three X11 variables above with these values):
+# Environment="XDG_SESSION_TYPE=wayland"
+# Environment="XDG_RUNTIME_DIR=%t"
+# Environment="WAYLAND_DISPLAY=wayland-0"
 # Path to the velocity directory
 WorkingDirectory=%h/velocity
 # Run the server

@@ -4,6 +4,12 @@ After=network.target
 
 [Service]
 Type=simple
+# This example targets the common X11 setup. The installer writes the active
+# graphical-session environment automatically; for Wayland, use %t and the
+# active WAYLAND_DISPLAY socket instead.
+Environment="XDG_SESSION_TYPE=x11"
+Environment="DISPLAY=:0"
+Environment="XAUTHORITY=%h/.Xauthority"
 ExecStart=/usr/bin/python3 %h/velocity/systemd/main.py
 Restart=always
 RestartSec=3
