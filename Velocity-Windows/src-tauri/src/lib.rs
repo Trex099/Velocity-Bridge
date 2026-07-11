@@ -1,4 +1,4 @@
-﻿use std::net::TcpListener;
+use std::net::TcpListener;
 use std::process::Command;
 
 use serde::Serialize;
@@ -188,8 +188,9 @@ fn stop_port_owner(port: u16) -> Result<bool, String> {
         use std::os::windows::process::CommandExt;
 
         if let Some(owner) = get_port_owner_windows(port) {
-            let status = Command::new("taskkill")
-                .args(["/F", "/PID", &owner.pid.to_string(), "/T"])
+            // Use wmic instead of taskkill to avoid shutdown errors
+            let status = Command::new("wmic")
+                .args(["process", "where", &format!("ProcessId={}", owner.pid), "call", "terminate"])
                 .creation_flags(CREATE_NO_WINDOW)
                 .status()
                 .map_err(|e| e.to_string())?;
@@ -399,8 +400,10 @@ fn kill_server() {
 fn kill_server() {
     use std::os::windows::process::CommandExt;
 
-    let _ = std::process::Command::new("taskkill")
-        .args(["/F", "/IM", "velocity-backend.exe", "/T"])
+    // Use wmic instead of taskkill to avoid shutdown errors (0xc0000142)
+    // wmic has better handling during system shutdown
+    let _ = std::process::Command::new("wmic")
+        .args(["process", "where", "name=velocity-backend.exe", "call", "terminate"])
         .creation_flags(CREATE_NO_WINDOW)
         .status();
 }
@@ -437,11 +440,6 @@ fn install_update(package_path: String) -> Result<(), String> {
     kill_server();
     std::process::exit(0);
 }
-
-
-
-
-
 
 
 
